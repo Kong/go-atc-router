@@ -1,4 +1,4 @@
-module github.com/Kong/go-atc-router
+module github.com/kong/go-atc-router
 
 go 1.19
 
