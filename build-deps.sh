@@ -8,14 +8,16 @@ while [ -n "$*" ]; do
   case "$1" in
     --build ) DO_BUILD=y ;;
     --header ) DO_HEADER=y ;;
+    --install=*) INSTALL_DEST="${1#--install=}" ;;
+    --install ) INSTALL_DEST="/usr/local/lib" ;;
     --rm ) DO_REMOVE=y ;;
   esac
   shift
 done
 
-
-DESTDIR="$(realpath "$(dirname "$0")")/lib"
+DESTDIR="${DESTDIR:-$PWD}"
 BUILDDIR="$(mktemp -d)"
+LIBNAME="target/release/libatc_router.a"
 
 mkdir -p "${DESTDIR}"
 pushd "${BUILDDIR}"
@@ -26,8 +28,12 @@ pushd "${BUILDDIR}"
 
     if [ -n "$DO_BUILD" ]; then
       make build
-      cp target/release/libatc_router.a "${DESTDIR}"
     fi
+
+    if [ -n "$INSTALL_DEST" -a -e "$LIBNAME" ]; then
+      sudo install "$LIBNAME" "$INSTALL_DEST"
+    fi
+
     if [ -n "$DO_HEADER" ]; then
       cbindgen -l c > "${DESTDIR}/atc-router.h"
     fi
