@@ -17,7 +17,7 @@ done
 
 DESTDIR="${DESTDIR:-$PWD}"
 BUILDDIR="$(mktemp -d)"
-LIBNAME="target/release/libatc_router.a"
+LIBNAME="target/release/libatc_router.so"
 
 mkdir -p "${DESTDIR}"
 pushd "${BUILDDIR}"
