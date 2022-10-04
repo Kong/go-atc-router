@@ -10,6 +10,7 @@ while [ -n "$*" ]; do
     --header ) DO_HEADER=y ;;
     --install=*) INSTALL_DEST="${1#--install=}" ;;
     --install ) INSTALL_DEST="/usr/local/lib" ;;
+    --cache ) DO_CACHE=y ;;
     --rm ) DO_REMOVE=y ;;
   esac
   shift
@@ -28,6 +29,10 @@ pushd "${BUILDDIR}"
 
     if [ -n "$DO_BUILD" ]; then
       make build
+    fi
+
+    if [ -n "$DO_CACHE" -a -e "$LIBNAME" ]; then
+      cp "$LIBNAME" /tmp/
     fi
 
     if [ -n "$INSTALL_DEST" -a -e "$LIBNAME" ]; then
