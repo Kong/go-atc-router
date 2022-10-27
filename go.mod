@@ -3,7 +3,7 @@ module github.com/kong/go-atc-router
 go 1.19
 
 require (
-	github.com/gofrs/uuid v4.3.0+incompatible
+	github.com/google/uuid v1.3.0
 	github.com/stretchr/testify v1.8.0
 )
 

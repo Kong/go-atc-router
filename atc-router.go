@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 )
 
 // FieldType serves to indicate the desired data type for a Schema field.
