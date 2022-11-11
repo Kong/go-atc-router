@@ -1,7 +1,6 @@
 package goatcrouter
 
-// #cgo CFLAGS: -I${SRCDIR}/lib/
-// #cgo LDFLAGS: -L${SRCDIR}/lib/ -Wl,-Bstatic -latc_router -Wl,-Bdynamic
+// #cgo LDFLAGS: -L/tmp/lib -Wl,-Bstatic -latc_router -Wl,-Bdynamic
 // #include "atc-router.h"
 import "C"
 
@@ -10,7 +9,7 @@ import (
 	"runtime"
 	"unsafe"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 )
 
 // FieldType serves to indicate the desired data type for a Schema field.

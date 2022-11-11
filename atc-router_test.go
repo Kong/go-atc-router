@@ -3,7 +3,7 @@ package goatcrouter
 import (
 	"testing"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,12 +17,7 @@ func verify(atc string) error {
 	router := NewRouter(schema)
 	defer router.Free()
 
-	id, err := uuid.NewV4()
-	if err != nil {
-		return err
-	}
-
-	return router.AddMatcher(1, id, atc)
+	return router.AddMatcher(1, uuid.New(), atc)
 }
 
 func Test_Verify(t *testing.T) {

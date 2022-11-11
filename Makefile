@@ -6,21 +6,12 @@ ATC_ROUTER_VERSION=feat/golang-binding
 LIBRARY=lib/libatc_router.a
 HEADER=lib/atc-router.h
 
-.PHONY: clean
+.PHONY: clean build-deps
 
-all: $(LIBRARY) $(HEADER)
+all: build-deps
 
-lib/atc-router/Makefile:
-	mkdir -p lib/
-	cd lib/ && git clone $(ATC_ROUTER_REPO)
-	cd lib/atc-router &&git checkout $(ATC_ROUTER_VERSION)
-
-$(LIBRARY): lib/atc-router/Makefile
-	cd lib/atc-router && make build
-	cp lib/atc-router/target/release/libatc_router.a $(LIBRARY)
-
-$(HEADER): lib/atc-router/cbindgen.toml
-	cd lib/atc-router && cbindgen -l c > ../atc-router.h
+build-deps:
+	./build-deps.sh --build --header --rm
 
 clean:
 	rm -rf lib/
