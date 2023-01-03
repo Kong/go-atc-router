@@ -1,6 +1,6 @@
 package goatcrouter
 
-// #cgo LDFLAGS: -L/tmp/lib -Wl,-Bstatic -latc_router -Wl,-Bdynamic
+// #cgo LDFLAGS: -L/tmp/lib -latc_router
 // #include "atc-router.h"
 import "C"
 
