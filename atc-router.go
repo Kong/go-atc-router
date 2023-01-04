@@ -44,8 +44,8 @@ func (s *Schema) Free() {
 
 // AddField is used to define fields and their associated type.
 func (s *Schema) AddField(field string, typ FieldType) {
-	fieldC := C.CString(field)
-	defer C.free(unsafe.Pointer(fieldC))
+	fieldC := unsafe.Pointer(C.CString(field))
+	defer C.free(fieldC)
 
 	C.schema_add_field(s.s, (*C.schar)(fieldC), uint32(typ))
 }
@@ -77,13 +77,13 @@ func (r *Router) Free() {
 // AddMatcher parses a new ATC rule and adds to the Router
 // under the given priority and ID.
 func (r *Router) AddMatcher(priority int, id uuid.UUID, atc string) error {
-	idC := C.CString(id.String())
-	defer C.free(unsafe.Pointer(idC))
+	idC := unsafe.Pointer(C.CString(id.String()))
+	defer C.free(idC)
 
 	errLen := C.ulong(1024)
 	errBuf := [1024]C.uchar{}
-	atcC := C.CString(atc)
-	defer C.free(unsafe.Pointer(atcC))
+	atcC := unsafe.Pointer(C.CString(atc))
+	defer C.free(atcC)
 
 	ok := C.router_add_matcher(r.r, C.ulong(priority), (*C.schar)(idC), (*C.schar)(atcC), &errBuf[0], &errLen)
 	if !ok {
