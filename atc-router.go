@@ -1,6 +1,7 @@
 package goatcrouter
 
 // #cgo LDFLAGS: -L/tmp/lib -latc_router
+// #include <stdlib.h>
 // #include "atc-router.h"
 import "C"
 
@@ -90,4 +91,25 @@ func (r *Router) AddMatcher(priority int, id uuid.UUID, atc string) error {
 		return fmt.Errorf(string(errBuf[:errLen]))
 	}
 	return nil
+}
+
+func (r *Router) GetFields() ([]string, error) {
+	num_flds := C.router_get_fields(r.r, nil, nil)
+	if num_flds == 0 {
+		return nil, nil
+	}
+
+	c_flds := make([](*C.uchar), num_flds)
+	c_lens := make([]C.ulong, num_flds)
+	c_lens[0] = num_flds
+
+	C.router_get_fields(r.r, &c_flds[0], &c_lens[0])
+
+	flds := make([]string, num_flds)
+
+	for i := range flds {
+		flds[i] = C.GoStringN((*C.char)(unsafe.Pointer(c_flds[i])), (C.int)(c_lens[i]))
+	}
+
+	return flds, nil
 }
