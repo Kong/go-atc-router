@@ -1,13 +1,15 @@
 package goatcrouter
 
+// #cgo CFLAGS: -DDEFINE_ATC_ROUTER_FFI=1
+// #cgo CFLAGS: -DDEFINE_ATC_ROUTER_EXPR_VALIDATION=1
 // #cgo LDFLAGS: -L/tmp/lib -latc_router
-// #include <stdlib.h>
 // #include "atc-router.h"
 import "C"
 
 import (
 	"fmt"
 	"runtime"
+	"slices"
 	"unsafe"
 
 	"github.com/google/uuid"
@@ -112,4 +114,96 @@ func (r *Router) GetFields() ([]string, error) {
 	}
 
 	return flds, nil
+}
+
+const (
+	defaultNumFields    = 100
+	defaultMaxFieldSize = 100
+	errBufsize          = 500
+)
+
+var (
+	fieldsBuf = []C.uchar{}
+	fieldsLen = C.ulong(defaultMaxFieldSize * defaultNumFields)
+	fieldsNum = C.ulong(defaultNumFields)
+	errorBuf  = [errBufsize]C.uchar{}
+)
+
+type ValidationResult struct {
+	fields    []string
+	operators uint64
+	errorMsg  string
+}
+
+func ValidateExpression(s Schema, atc string) *ValidationResult {
+	atcC := unsafe.Pointer(C.CString(atc))
+	defer C.free(atcC)
+
+	operators := C.ulong(0)
+	errorBufLen := C.ulong(errBufsize)
+
+loop:
+	for {
+		if len(fieldsBuf) < int(fieldsLen) {
+			fieldsBuf = make([]C.uchar, fieldsLen)
+		}
+
+		switch C.expression_validate(
+			(*C.uchar)(atcC), s.s,
+			(*C.uchar)(&fieldsBuf[0]), &fieldsLen, &fieldsNum,
+			&operators,
+			&errorBuf[0], &errorBufLen) {
+		case 0:
+			break loop
+		case 1:
+			return &ValidationResult{
+				errorMsg: C.GoStringN(
+					(*C.char)(unsafe.Pointer(&errorBuf[0])),
+					C.int(errorBufLen),
+				),
+			}
+		case 2:
+			continue
+		}
+	}
+	return &ValidationResult{
+		fields:    splitByNulls(fieldsBuf, int(fieldsNum)),
+		operators: uint64(operators),
+	}
+}
+
+const (
+	BinaryOperatorFlags_EQUALS = 1 << iota
+	BinaryOperatorFlags_NOT_EQUALS
+	BinaryOperatorFlags_REGEX
+	BinaryOperatorFlags_PREFIX
+	BinaryOperatorFlags_POSTFIX
+	BinaryOperatorFlags_GREATER
+	BinaryOperatorFlags_GREATER_OR_EQUAL
+	BinaryOperatorFlags_LESS
+	BinaryOperatorFlags_LESS_OR_EQUAL
+	BinaryOperatorFlags_IN
+	BinaryOperatorFlags_NOT_IN
+	BinaryOperatorFlags_CONTAINS
+)
+
+func splitByNulls(b []C.uchar, maxN int) []string {
+	out := make([]string, maxN)
+	pos := 0
+	for i := range out {
+		fieldLen := slices.Index(b[pos:], C.uchar(0))
+		if fieldLen <= 0 {
+			break
+		}
+
+		str := C.GoStringN((*C.char)(unsafe.Pointer(&b[pos])), C.int(fieldLen))
+
+		out[i] = str
+		pos += fieldLen + 1
+		if pos >= len(b) {
+			break
+		}
+	}
+	slices.Sort(out)
+	return out
 }

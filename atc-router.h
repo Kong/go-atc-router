@@ -5,7 +5,21 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ERR_BUF_MAX_LEN 2048
+#if defined(DEFINE_ATC_ROUTER_FFI)
+#define ERR_BUF_MAX_LEN 4096
+#endif
+
+#if defined(DEFINE_ATC_ROUTER_FFI)
+#define ATC_ROUTER_EXPRESSION_VALIDATE_OK 0
+#endif
+
+#if defined(DEFINE_ATC_ROUTER_FFI)
+#define ATC_ROUTER_EXPRESSION_VALIDATE_FAILED 1
+#endif
+
+#if defined(DEFINE_ATC_ROUTER_FFI)
+#define ATC_ROUTER_EXPRESSION_VALIDATE_BUF_TOO_SMALL 2
+#endif
 
 typedef enum Type {
   Type_String,
@@ -21,66 +35,478 @@ typedef struct Router Router;
 
 typedef struct Schema Schema;
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
 typedef enum CValue_Tag {
-  CValue_CString,
-  CValue_CIpCidr,
-  CValue_CIpAddr,
-  CValue_CInt,
+#if defined(DEFINE_ATC_ROUTER_FFI)
+  CValue_Str,
+#endif
+#if defined(DEFINE_ATC_ROUTER_FFI)
+  CValue_IpCidr,
+#endif
+#if defined(DEFINE_ATC_ROUTER_FFI)
+  CValue_IpAddr,
+#endif
+#if defined(DEFINE_ATC_ROUTER_FFI)
+  CValue_Int,
+#endif
 } CValue_Tag;
+
+#if defined(DEFINE_ATC_ROUTER_FFI)
+typedef struct CValue_Str_Body {
+  const uint8_t *_0;
+  uintptr_t _1;
+} CValue_Str_Body;
+#endif
 
 typedef struct CValue {
   CValue_Tag tag;
   union {
+#if defined(DEFINE_ATC_ROUTER_FFI)
+    CValue_Str_Body str;
+#endif
+#if defined(DEFINE_ATC_ROUTER_FFI)
     struct {
-      const int8_t *c_string;
+      const uint8_t *ip_cidr;
     };
+#endif
+#if defined(DEFINE_ATC_ROUTER_FFI)
     struct {
-      const int8_t *c_ip_cidr;
+      const uint8_t *ip_addr;
     };
+#endif
+#if defined(DEFINE_ATC_ROUTER_FFI)
     struct {
-      const int8_t *c_ip_addr;
+      int64_t int_;
     };
-    struct {
-      int64_t c_int;
-    };
+#endif
   };
 } CValue;
+#endif
 
+typedef struct BinaryOperatorFlags {
+  uint64_t bits;
+} BinaryOperatorFlags;
+#define BinaryOperatorFlags_EQUALS (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 0) }
+#define BinaryOperatorFlags_NOT_EQUALS (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 1) }
+#define BinaryOperatorFlags_REGEX (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 2) }
+#define BinaryOperatorFlags_PREFIX (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 3) }
+#define BinaryOperatorFlags_POSTFIX (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 4) }
+#define BinaryOperatorFlags_GREATER (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 5) }
+#define BinaryOperatorFlags_GREATER_OR_EQUAL (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 6) }
+#define BinaryOperatorFlags_LESS (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 7) }
+#define BinaryOperatorFlags_LESS_OR_EQUAL (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 8) }
+#define BinaryOperatorFlags_IN (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 9) }
+#define BinaryOperatorFlags_NOT_IN (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 10) }
+#define BinaryOperatorFlags_CONTAINS (BinaryOperatorFlags){ .bits = (uint64_t)(1 << 11) }
+#define BinaryOperatorFlags_UNUSED (BinaryOperatorFlags){ .bits = (uint64_t)~((((((((((((BinaryOperatorFlags_EQUALS).bits | (BinaryOperatorFlags_NOT_EQUALS).bits) | (BinaryOperatorFlags_REGEX).bits) | (BinaryOperatorFlags_PREFIX).bits) | (BinaryOperatorFlags_POSTFIX).bits) | (BinaryOperatorFlags_GREATER).bits) | (BinaryOperatorFlags_GREATER_OR_EQUAL).bits) | (BinaryOperatorFlags_LESS).bits) | (BinaryOperatorFlags_LESS_OR_EQUAL).bits) | (BinaryOperatorFlags_IN).bits) | (BinaryOperatorFlags_NOT_IN).bits) | (BinaryOperatorFlags_CONTAINS).bits) }
+
+#if defined(DEFINE_ATC_ROUTER_FFI)
 struct Schema *schema_new(void);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Deallocate the schema object.
+ *
+ * # Errors
+ *
+ * This function never fails.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `schema` must be a valid pointer returned by [`schema_new`].
+ */
 void schema_free(struct Schema *schema);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Add a new field with the specified type to the schema.
+ *
+ * # Arguments
+ *
+ * - `schema`: a valid pointer to the [`Schema`] object returned by [`schema_new`].
+ * - `field`: the C-style string representing the field name.
+ * - `typ`: the type of the field.
+ *
+ * # Panics
+ *
+ * This function will panic if the C-style string
+ * pointed by `field` is not a valid UTF-8 string.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `schema` must be a valid pointer returned by [`schema_new`].
+ * - `field` must be a valid pointer to a C-style string, must be properly aligned,
+ *   and must not have '\0' in the middle.
+ */
 void schema_add_field(struct Schema *schema, const int8_t *field, enum Type typ);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Create a new router object associated with the schema.
+ *
+ * # Arguments
+ *
+ * - `schema`: a valid pointer to the [`Schema`] object returned by [`schema_new`].
+ *
+ * # Errors
+ *
+ * This function never fails.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `schema` must be a valid pointer returned by [`schema_new`].
+ */
 struct Router *router_new(const struct Schema *schema);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Deallocate the router object.
+ *
+ * # Errors
+ *
+ * This function never fails.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `router` must be a valid pointer returned by [`router_new`].
+ */
 void router_free(struct Router *router);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Add a new matcher to the router.
+ *
+ * # Arguments
+ *
+ * - `router`: a pointer to the [`Router`] object returned by [`router_new`].
+ * - `priority`: the priority of the matcher, higher value means higher priority,
+ *   and the matcher with the highest priority will be executed first.
+ * - `uuid`: the C-style string representing the UUID of the matcher.
+ * - `atc`: the C-style string representing the ATC expression.
+ * - `errbuf`: a buffer to store the error message.
+ * - `errbuf_len`: a pointer to the length of the error message buffer.
+ *
+ * # Returns
+ *
+ * Returns `true` if the matcher was added successfully, otherwise `false`,
+ * and the error message will be stored in the `errbuf`,
+ * and the length of the error message will be stored in `errbuf_len`.
+ *
+ * # Errors
+ *
+ * This function will return `false` if the matcher could not be added to the router,
+ * such as duplicate UUID, and invalid ATC expression.
+ *
+ * # Panics
+ *
+ * This function will panic when:
+ *
+ * - `uuid` doesn't point to a ASCII sequence representing a valid 128-bit UUID.
+ * - `atc` doesn't point to a valid C-style string.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `router` must be a valid pointer returned by [`router_new`].
+ * - `uuid` must be a valid pointer to a C-style string, must be properly aligned,
+ *    and must not have '\0' in the middle.
+ * - `atc` must be a valid pointer to a C-style string, must be properly aligned,
+ *    and must not have '\0' in the middle.
+ * - `errbuf` must be valid to read and write for `errbuf_len * size_of::<u8>()` bytes,
+ *    and it must be properly aligned.
+ * - `errbuf_len` must be valid to read and write for `size_of::<usize>()` bytes,
+ *    and it must be properly aligned.
+ */
 bool router_add_matcher(struct Router *router,
                         uintptr_t priority,
                         const int8_t *uuid,
                         const int8_t *atc,
                         uint8_t *errbuf,
                         uintptr_t *errbuf_len);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Remove a matcher from the router.
+ *
+ * # Arguments
+ * - `router`: a pointer to the [`Router`] object returned by [`router_new`].
+ * - `priority`: the priority of the matcher to be removed.
+ * - `uuid`: the C-style string representing the UUID of the matcher to be removed.
+ *
+ * # Returns
+ *
+ * Returns `true` if the matcher was removed successfully, otherwise `false`,
+ * such as when the matcher with the specified UUID doesn't exist or
+ * the priority doesn't match the UUID.
+ *
+ * # Panics
+ *
+ * This function will panic when `uuid` doesn't point to a ASCII sequence
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `router` must be a valid pointer returned by [`router_new`].
+ * - `uuid` must be a valid pointer to a C-style string, must be properly aligned,
+ *    and must not have '\0' in the middle.
+ */
 bool router_remove_matcher(struct Router *router, uintptr_t priority, const int8_t *uuid);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Execute the router with the context.
+ *
+ * # Arguments
+ *
+ * - `router`: a pointer to the [`Router`] object returned by [`router_new`].
+ * - `context`: a pointer to the [`Context`] object.
+ *
+ * # Returns
+ *
+ * Returns `true` if found a match, `false` means no match found.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `router` must be a valid pointer returned by [`router_new`].
+ * - `context` must be a valid pointer returned by [`context_new`],
+ *    and must be reset by [`context_reset`] before calling this function
+ *    if you want to reuse the same context for multiple matches.
+ */
 bool router_execute(const struct Router *router, struct Context *context);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Get the de-duplicated fields that are actually used in the router.
+ * This is useful when you want to know what fields are actually used in the router,
+ * so you can generate their values on-demand.
+ *
+ * # Arguments
+ *
+ * - `router`: a pointer to the [`Router`] object returned by [`router_new`].
+ * - `fields`: a pointer to an array of pointers to the field names
+ *    (NOT C-style strings) that are actually used in the router, which will be filled in.
+ *    if `fields` is `NULL`, this function will only return the number of fields used
+ *    in the router.
+ * - `fields_len`: a pointer to an array of the length of each field name.
+ *
+ * # Lifetimes
+ *
+ * The string pointers stored in `fields` might be invalidated if any of the following
+ * operations are happened:
+ *
+ * - The `router` was deallocated.
+ * - A new matcher was added to the `router`.
+ * - A matcher was removed from the `router`.
+ *
+ * # Returns
+ *
+ * Returns the number of fields that are actually used in the router.
+ *
+ * # Errors
+ *
+ * This function never fails.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `router` must be a valid pointer returned by [`router_new`].
+ * - If `fields` is not `NULL`, `fields` must be valid to read and write for
+ *   `fields_len * size_of::<*const u8>()` bytes, and it must be properly aligned.
+ * - If `fields` is not `NULL`, `fields_len` must be valid to read and write for
+ *   `size_of::<usize>()` bytes, and it must be properly aligned.
+ * - DO NOT write the memory pointed by the elements of `fields`.
+ * - DO NOT access the memory pointed by the elements of `fields`
+ *   after it becomes invalid, see the `Lifetimes` section.
+ */
 uintptr_t router_get_fields(const struct Router *router,
                             const uint8_t **fields,
                             uintptr_t *fields_len);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Allocate a new context object associated with the schema.
+ *
+ * # Errors
+ *
+ * This function never fails.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `schema` must be a valid pointer returned by [`schema_new`].
+ */
 struct Context *context_new(const struct Schema *schema);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Deallocate the context object.
+ *
+ * # Errors
+ *
+ * This function never fails.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `context` must be a valid pointer returned by [`context_new`].
+ */
 void context_free(struct Context *context);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Add a value associated with a field to the context.
+ * This is useful when you want to match a value against a field in the schema.
+ *
+ * # Arguments
+ *
+ * - `context`: a pointer to the [`Context`] object.
+ * - `field`: the C-style string representing the field name.
+ * - `value`: the value to be added to the context.
+ * - `errbuf`: a buffer to store the error message.
+ * - `errbuf_len`: a pointer to the length of the error message buffer.
+ *
+ * # Returns
+ *
+ * Returns `true` if the value was added successfully, otherwise `false`,
+ * and the error message will be stored in the `errbuf`,
+ * and the length of the error message will be stored in `errbuf_len`.
+ *
+ * # Errors
+ *
+ * This function will return `false` if the value could not be added to the context,
+ * such as when a String value is not a valid UTF-8 string.
+ *
+ * # Panics
+ *
+ * This function will panic if the provided value does not match the schema.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * * `context` must be a valid pointer returned by [`context_new`].
+ * * `field` must be a valid pointer to a C-style string,
+ *   must be properply aligned, and must not have '\0' in the middle.
+ * * `value` must be a valid pointer to a [`CValue`].
+ * * `errbuf` must be valid to read and write for `errbuf_len * size_of::<u8>()` bytes,
+ *   and it must be properly aligned.
+ * * `errbuf_len` must be vlaid to read and write for `size_of::<usize>()` bytes,
+ *   and it must be properly aligned.
+ */
 bool context_add_value(struct Context *context,
                        const int8_t *field,
                        const struct CValue *value,
                        uint8_t *errbuf,
                        uintptr_t *errbuf_len);
+#endif
 
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Reset the context so that it can be reused.
+ * This is useful when you want to reuse the same context for multiple matches.
+ * This will clear all the values that were added to the context,
+ * but keep the memory allocated for the context.
+ *
+ * # Errors
+ *
+ * This function never fails.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `context` must be a valid pointer returned by [`context_new`].
+ */
+void context_reset(struct Context *context);
+#endif
+
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Get the result of the context.
+ *
+ * # Arguments
+ *
+ * - `context`: a pointer to the [`Context`] object.
+ * - `uuid_hex`: If not `NULL`, the UUID of the matched matcher will be stored.
+ * - `matched_field`: If not `NULL`, the field name (C-style string) of the matched value will be stored.
+ * - `matched_value`: If the `matched_field` is not `NULL`, the value of the matched field will be stored.
+ * - `matched_value_len`: If the `matched_field` is not `NULL`, the length of the value of the matched field will be stored.
+ * - `capture_names`: A pointer to an array of pointers to the capture names, each element is a non-C-style string pointer.
+ * - `capture_names_len`: A pointer to an array of the length of each capture name.
+ * - `capture_values`: A pointer to an array of pointers to the capture values, each element is a non-C-style string pointer.
+ * - `capture_values_len`: A pointer to an array of the length of each capture value.
+ *
+ * # Returns
+ *
+ * Returns the number of captures that are stored in the context.
+ *
+ * # Lifetimes
+ *
+ * The string pointers stored in `matched_value`, `capture_names`, and `capture_values`
+ * might be invalidated if any of the following operations are happened:
+ *
+ * - The `context` was deallocated.
+ * - The `context` was reset by [`context_reset`].
+ *
+ * # Panics
+ *
+ * This function will panic if the `matched_field` is not a valid UTF-8 string.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `context` must be a valid pointer returned by [`context_new`],
+ *    must be passed to [`router_execute`] before calling this function,
+ *    and must not be reset by [`context_reset`] before calling this function.
+ * - If `uuid_hex` is not `NULL`, `uuid_hex` must be valid to read and write for
+ *   `16 * size_of::<u8>()` bytes, and it must be properly aligned.
+ * - If `matched_field` is not `NULL`,
+ *   `matched_field` must be a vlaid pointer to a C-style string,
+ *   must be properly aligned, and must not have '\0' in the middle.
+ * - If `matched_value` is not `NULL`,
+ *   `matched_value` must be valid to read and write for
+ *   `mem::size_of::<*const u8>()` bytes, and it must be properly aligned.
+ * - If `matched_value` is not `NULL`, `matched_value_len` must be valid to read and write for
+ *   `size_of::<usize>()` bytes, and it must be properly aligned.
+ * - If `uuid_hex` is not `NULL`, `capture_names` must be valid to read and write for
+ *   `<captures> * size_of::<*const u8>()` bytes, and it must be properly aligned.
+ * - If `uuid_hex` is not `NULL`, `capture_names_len` must be valid to read and write for
+ *   `<captures> * size_of::<usize>()` bytes, and it must be properly aligned.
+ * - If `uuid_hex` is not `NULL`, `capture_values` must be valid to read and write for
+ *   `<captures> * size_of::<*const u8>()` bytes, and it must be properly aligned.
+ * - If `uuid_hex` is not `NULL`, `capture_values_len` must be valid to read and write for
+ *   `<captures> * size_of::<usize>()` bytes, and it must be properly aligned.
+ *
+ * Note: You should get the `<captures>` by calling this function and set every pointer
+ * except the `context` to `NULL` to get the number of captures.
+ */
 intptr_t context_get_result(const struct Context *context,
                             uint8_t *uuid_hex,
                             const int8_t *matched_field,
@@ -90,3 +516,78 @@ intptr_t context_get_result(const struct Context *context,
                             uintptr_t *capture_names_len,
                             const uint8_t **capture_values,
                             uintptr_t *capture_values_len);
+#endif
+
+#if defined(DEFINE_ATC_ROUTER_FFI)
+/**
+ * Validate the ATC expression with the schema.
+ *
+ * # Arguments
+ *
+ * - `atc`: the C-style string representing the ATC expression.
+ * - `schema`: a valid pointer to the [`Schema`] object returned by [`schema_new`].
+ * - `fields_buf`: a buffer to store the used fields.
+ * - `fields_len`: a pointer to the length of the fields buffer.
+ * - `fields_total`: a pointer for saving the total number of the fields.
+ * - `operators`: a pointer for saving the used operators with bitflags.
+ * - `errbuf`: a buffer to store the error message.
+ * - `errbuf_len`: a pointer to the length of the error message buffer.
+ *
+ * # Returns
+ *
+ * Returns an integer value indicating the validation result:
+ * - ATC_ROUTER_EXPRESSION_VALIDATE_OK(0) if validation is passed.
+ * - ATC_ROUTER_EXPRESSION_VALIDATE_FAILED(1) if validation is failed.
+ * - ATC_ROUTER_EXPRESSION_VALIDATE_BUF_TOO_SMALL(2) if the provided fields buffer is not enough.
+ *
+ * If `fields_buf` is null and `fields_len` or `fields_total` is non-null, it will write
+ * the required buffer length and the total number of fields to the provided pointers.
+ * If `fields_buf` is non-null, and `fields_len` is enough for the required buffer length,
+ * it will write the used fields to the buffer separated by '\0' and the total number of fields
+ * to the `fields_total`, and `fields_len` will be updated with the total buffer length.
+ * If `fields_buf` is non-null, and `fields_len` is not enough for the required buffer length,
+ * it will write the required buffer length to the `fields_len`, and the total number of fields
+ * to the `fields_total`, and return `2`.
+ * If `operators` is non-null, it will write the used operators with bitflags to the provided pointer.
+ * The bitflags is defined by `BinaryOperatorFlags` and it must not contain any bits from `BinaryOperatorFlags::UNUSED`.
+ *
+ *
+ * # Panics
+ *
+ * This function will panic when:
+ *
+ * - `atc` doesn't point to a valid C-style string.
+ * - `fields_len` and `fields_total` are null when `fields_buf` is non-null.
+ *
+ * # Safety
+ *
+ * Violating any of the following constraints will result in undefined behavior:
+ *
+ * - `atc` must be a valid pointer to a C-style string, must be properly aligned,
+ *    and must not have '\0' in the middle.
+ * - `schema` must be a valid pointer returned by [`schema_new`].
+ * - `fields_buf` must be a valid to write for `fields_len * size_of::<u8>()` bytes,
+ *    and it must be properly aligned if non-null.
+ * - `fields_len` must be a valid to write for `size_of::<usize>()` bytes,
+ *    and it must be properly aligned if non-null.
+ * - `fields_total` must be a valid to write for `size_of::<usize>()` bytes,
+ *    and it must be properly aligned if non-null.
+ * - `operators` must be a valid to write for `size_of::<u64>()` bytes,
+ *    and it must be properly aligned if non-null.
+ * - `errbuf` must be valid to read and write for `errbuf_len * size_of::<u8>()` bytes,
+ *    and it must be properly aligned.
+ * - `errbuf_len` must be valid to read and write for `size_of::<usize>()` bytes,
+ *    and it must be properly aligned.
+ * - If `fields_buf` is non-null, `fields_len` and `fields_total` must be non-null.
+ * - If `fields_buf` is null, `fields_len` and `fields_total` can be non-null
+ *   for writing required buffer length and total number of fields.
+ */
+int64_t expression_validate(const uint8_t *atc,
+                            const struct Schema *schema,
+                            uint8_t *fields_buf,
+                            uintptr_t *fields_len,
+                            uintptr_t *fields_total,
+                            uint64_t *operators,
+                            uint8_t *errbuf,
+                            uintptr_t *errbuf_len);
+#endif

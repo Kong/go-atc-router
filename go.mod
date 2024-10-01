@@ -1,6 +1,6 @@
 module github.com/kong/go-atc-router
 
-go 1.19
+go 1.22.1
 
 require (
 	github.com/google/uuid v1.3.0
