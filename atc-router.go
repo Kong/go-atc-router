@@ -123,7 +123,7 @@ const (
 )
 
 var (
-	fieldsBuf = []C.uchar{}
+	fieldsBuf = []byte{}
 	fieldsLen = C.ulong(defaultMaxFieldSize * defaultNumFields)
 	fieldsNum = C.ulong(defaultNumFields)
 	errorBuf  = [errBufsize]C.uchar{}
@@ -145,7 +145,7 @@ func ValidateExpression(s Schema, atc string) *ValidationResult {
 loop:
 	for {
 		if len(fieldsBuf) < int(fieldsLen) {
-			fieldsBuf = make([]C.uchar, fieldsLen)
+			fieldsBuf = make([]byte, fieldsLen)
 		}
 
 		switch C.expression_validate(
@@ -187,12 +187,12 @@ const (
 	BinaryOperatorFlags_CONTAINS
 )
 
-func splitByNulls(b []C.uchar, maxN int) []string {
-	out := make([]string, maxN)
+func splitByNulls(b []byte, n int) []string {
+	out := make([]string, n)
 	pos := 0
 	for i := range out {
-		fieldLen := slices.Index(b[pos:], C.uchar(0))
-		if fieldLen <= 0 {
+		fieldLen := slices.Index(b[pos:], 0)
+		if fieldLen < 0 {
 			break
 		}
 

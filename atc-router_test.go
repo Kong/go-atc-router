@@ -1,6 +1,7 @@
 package goatcrouter
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -62,6 +63,31 @@ func Test_GetFields(t *testing.T) {
 	fields, err = get_fields(`tcp.port == 1 && http.path==""`)
 	require.NoError(t, err)
 	require.ElementsMatch(t, []any{"http.path", "tcp.port"}, fields)
+}
+
+func Test_splitByNulls(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		buf  []byte
+		n    int
+		out  []string
+	}{
+		{name: "empty input", buf: nil, out: []string{}},
+		{name: "empty input, n:1", buf: nil, n: 1, out: []string{""}},
+		{name: "single string", buf: []byte("one\x00"), n: 1, out: []string{"one"}},
+		{name: "single string, n:0", buf: []byte("one\x00"), n: 0, out: []string{}},
+		{name: "single string, n:2", buf: []byte("one\x00"), n: 2, out: []string{"", "one"}},
+		{name: "unterminated", buf: []byte("one"), n: 1, out: []string{""}},
+		{name: "two, unterminated", buf: []byte("one\x00two"), n: 2, out: []string{"", "one"}},
+		{name: "consecutive separator 3", buf: []byte("one\x00\x00two\x00"), n: 3, out: []string{"", "one", "two"}},
+		{name: "consecutive separator 2", buf: []byte("one\x00\x00two\x00"), n: 2, out: []string{"", "one"}},
+	} {
+		t.Run(fmt.Sprintf("splitByNulls %q:", test.name), func(t *testing.T) {
+			out := splitByNulls(test.buf, test.n)
+			require.Equal(t, test.n, len(out))
+			require.EqualValues(t, test.out, out)
+		})
+	}
 }
 
 func Test_ValidateExpression(t *testing.T) {
