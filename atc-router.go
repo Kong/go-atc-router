@@ -1,7 +1,6 @@
 package goatcrouter
 
 // #cgo CFLAGS: -DDEFINE_ATC_ROUTER_FFI=1
-// #cgo CFLAGS: -DDEFINE_ATC_ROUTER_EXPR_VALIDATION=1
 // #cgo LDFLAGS: -L/tmp/lib -latc_router
 // #include "atc-router.h"
 import "C"
