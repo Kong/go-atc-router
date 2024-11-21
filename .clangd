@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: ['-DDEFINE_ATC_ROUTER_FFI=1']
