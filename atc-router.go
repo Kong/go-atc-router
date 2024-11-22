@@ -2,6 +2,7 @@ package goatcrouter
 
 // #cgo CFLAGS: -DDEFINE_ATC_ROUTER_FFI=1
 // #cgo LDFLAGS: -L/tmp/lib -latc_router
+// #include <stddef.h>
 // #include "atc-router.h"
 import "C"
 
@@ -138,8 +139,8 @@ func ValidateExpression(s Schema, atc string) *ValidationResult {
 	atcC := unsafe.Pointer(C.CString(atc))
 	defer C.free(atcC)
 
-	operators := C.ulong(0)
-	errorBufLen := C.ulong(errBufsize)
+	operators := C.uint64_t(0)
+	errorBufLen := C.size_t(errBufsize)
 
 loop:
 	for {
