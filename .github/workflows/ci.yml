@@ -1,11 +1,20 @@
 name: ci.yml
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        type: string
+      draft:
+        description: 'Release as draft'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  build-lib:
+  build-and-release:
+    name: Build and Release
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
@@ -16,10 +25,8 @@ jobs:
         with:
           repository: Kong/atc-router
           path: atc-router
-      - name: Create tag name
-        run: echo "TAG_NAME=pr-${{ github.event.number }}" >> $GITHUB_ENV # temporary tag for PRs
       - name: Create artifact name
-        run: echo "ARTIFACT_NAME=libatc_router-${{ env.TAG_NAME }}.tar.gz" >> $GITHUB_ENV
+        run: echo "ARTIFACT_NAME=libatc_router-${{ inputs.tag }}.tar.gz" >> $GITHUB_ENV
       - name: Build lib
         run: |
           mkdir -p bin
@@ -29,6 +36,6 @@ jobs:
         uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
         with:
           artifacts: "atc-router/target/release/${{ env.ARTIFACT_NAME }}"
-          tag: ${{ env.TAG_NAME }}
-          draft: true
-          allowUpdates: true
+          tag: ${{ inputs.tag }}
+          draft: ${{ inputs.draft }}
+          allowUpdates: ${{ inputs.draft }}
