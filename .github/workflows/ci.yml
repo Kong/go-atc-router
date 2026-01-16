@@ -1,0 +1,34 @@
+name: ci.yml
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-lib:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout atc-router
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: Kong/atc-router
+          path: atc-router
+      - name: Create tag name
+        run: echo "TAG_NAME=pr-${{ github.event.number }}" >> $GITHUB_ENV # temporary tag for PRs
+      - name: Create artifact name
+        run: echo "ARTIFACT_NAME=libatc_router-${{ env.TAG_NAME }}.tar.gz" >> $GITHUB_ENV
+      - name: Build lib
+        run: |
+          mkdir -p bin
+          cd atc-router && make build 
+          cd target/release/ && tar -zcvf ${{ env.ARTIFACT_NAME }} libatc_router.*
+      - name: Create Release
+        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
+        with:
+          artifacts: "atc-router/target/release/${{ env.ARTIFACT_NAME }}"
+          tag: ${{ env.TAG_NAME }}
+          draft: true
+          allowUpdates: true
