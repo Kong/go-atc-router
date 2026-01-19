@@ -1,0 +1,3 @@
+[submodule "atc-router"]
+	path = atc-router
+	url = https://github.com/Kong/atc-router

@@ -1,0 +1,41 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+        type: string
+      draft:
+        description: 'Release as draft'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout atc-router
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: Kong/atc-router
+          path: atc-router
+      - name: Create artifact name
+        run: echo "ARTIFACT_NAME=libatc_router-${{ inputs.tag }}.tar.gz" >> $GITHUB_ENV
+      - name: Build lib
+        run: |
+          mkdir -p bin
+          cd atc-router && make build 
+          cd target/release/ && tar -zcvf ${{ env.ARTIFACT_NAME }} libatc_router.*
+      - name: Create Release
+        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
+        with:
+          artifacts: "atc-router/target/release/${{ env.ARTIFACT_NAME }}"
+          tag: ${{ inputs.tag }}
+          draft: ${{ inputs.draft }}
+          allowUpdates: ${{ inputs.draft }}
