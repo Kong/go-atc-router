@@ -13,10 +13,16 @@ on:
         default: false
 
 jobs:
-  build-and-release:
-    name: Build and Release
-    runs-on: ubuntu-latest
-    permissions: write-all
+
+  build:
+    name: Build
+    strategy:
+      matrix:
+        arch: [ amd64, arm64 ]
+    runs-on: ${{ matrix.arch == 'amd64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
+    outputs:
+      tag: ${{ steps.tag-name.outputs.tag }}
+      artifact: ${{ steps.artifact-name.outputs.artifact }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -25,17 +31,41 @@ jobs:
         with:
           repository: Kong/atc-router
           path: atc-router
+      - name: Create tag name
+        id: tag-name
+        run: echo "tag=${{ inputs.tag == '' && 'snapshot' || inputs.tag }}" >> "$GITHUB_OUTPUT"
       - name: Create artifact name
-        run: echo "ARTIFACT_NAME=libatc_router-${{ inputs.tag }}.tar.gz" >> $GITHUB_ENV
+        id: artifact-name
+        run: echo "artifact=libatc_router-${{ steps.tag-name.outputs.tag }}-${{ matrix.arch }}.tar.gz" >> "$GITHUB_OUTPUT"
       - name: Build lib
         run: |
           mkdir -p bin
           cd atc-router && make build 
-          cd target/release/ && tar -zcvf ${{ env.ARTIFACT_NAME }} libatc_router.*
+          cd target/release/ && tar -zcvf ${{ steps.artifact-name.outputs.artifact }} libatc_router.*
+      - name: Upload artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ steps.artifact-name.outputs.artifact }}
+          path: atc-router/target/release/${{ steps.artifact-name.outputs.artifact }}
+          if-no-files-found: error
+          overwrite: true
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 #v7.0.0
+        with:
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -la
       - name: Create Release
         uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
         with:
-          artifacts: "atc-router/target/release/${{ env.ARTIFACT_NAME }}"
-          tag: ${{ inputs.tag }}
+          artifacts: "libatc_router-*.tar.gz"
+          tag: ${{ needs.build.outputs.tag }}
           draft: ${{ inputs.draft }}
-          allowUpdates: ${{ inputs.draft }}
+          allowUpdates: ${{ inputs.tag == '' && 'true' || inputs.draft }}
