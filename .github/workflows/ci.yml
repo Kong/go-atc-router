@@ -37,22 +37,28 @@ jobs:
       - name: Create artifact name
         id: artifact-name
         run: echo "artifact=libatc_router-${{ steps.tag-name.outputs.tag }}-${{ matrix.arch }}.tar.gz" >> "$GITHUB_OUTPUT"
-      - name: Build lib
-        run: |
-          mkdir -p bin
-          cd atc-router && make build 
-          cd target/release/ && tar -zcvf ${{ steps.artifact-name.outputs.artifact }} libatc_router.*
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Docker build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile.build
+          push: false
+          outputs: type=local,dest=./image
+          build-args: |
+            ARTIFACT_NAME=${{ steps.artifact-name.outputs.artifact }}
       - name: Upload artifacts
+        id: upload-artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: ${{ steps.artifact-name.outputs.artifact }}
-          path: atc-router/target/release/${{ steps.artifact-name.outputs.artifact }}
+          path: ./image/out/${{ steps.artifact-name.outputs.artifact }}
           if-no-files-found: error
-          overwrite: true
 
   release:
     name: Release
-    needs: build
+    needs: [ build ]
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
@@ -60,6 +66,7 @@ jobs:
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 #v7.0.0
         with:
           merge-multiple: true
+          pattern: "*.tar.gz"
       - name: List artifacts
         run: ls -la
       - name: Create Release
