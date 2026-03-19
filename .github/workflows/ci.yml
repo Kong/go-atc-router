@@ -15,14 +15,28 @@ on:
 jobs:
 
   build:
-    name: Build
+    name: Build ${{ matrix.variant }}
     strategy:
       matrix:
-        arch: [ amd64, arm64, macos ]
-    runs-on: ${{ matrix.arch == 'amd64' && 'ubuntu-latest' || matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'macos-latest' }}
+        include:
+          - variant: glibc_linux_amd64
+            runner: ubuntu-latest
+            build_mode: native
+          - variant: glibc_linux_arm64
+            runner: ubuntu-24.04-arm
+            build_mode: native
+          - variant: musl_linux_amd64
+            runner: ubuntu-latest
+            build_mode: docker
+          - variant: musl_linux_arm64
+            runner: ubuntu-24.04-arm
+            build_mode: docker
+          - variant: darwin_arm64
+            runner: macos-latest
+            build_mode: native
+    runs-on: ${{ matrix.runner }}
     outputs:
       tag: ${{ steps.tag-name.outputs.tag }}
-      artifact: ${{ steps.artifact-name.outputs.artifact }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -36,8 +50,9 @@ jobs:
         run: echo "tag=${{ inputs.tag == '' && 'snapshot' || inputs.tag }}" >> "$GITHUB_OUTPUT"
       - name: Create artifact name
         id: artifact-name
-        run: echo "artifact=libatc_router-${{ steps.tag-name.outputs.tag }}-${{ matrix.arch }}.tar.gz" >> "$GITHUB_OUTPUT"
+        run: echo "artifact=libatc_router-${{ steps.tag-name.outputs.tag }}-${{ matrix.variant }}.tar.gz" >> "$GITHUB_OUTPUT"
       - name: Install rustup, if needed
+        if: ${{ matrix.build_mode == 'native' }}
         shell: bash
         run: |
           if ! command -v rustup &> /dev/null ; then
@@ -46,31 +61,62 @@ jobs:
             echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> $GITHUB_PATH
           fi
 
-      - name: rustup toolchain install ${{ inputs.toolchain }}
-        env:
-          toolchain: ${{ inputs.toolchain }}
+      - name: Install stable toolchain
+        if: ${{ matrix.build_mode == 'native' }}
         shell: bash
         run: |
-          rustup toolchain install ${toolchain} --profile minimal --no-self-update
-
+          rustup toolchain install stable --profile minimal --no-self-update
       - id: versions
         name: Print installed versions
+        if: ${{ matrix.build_mode == 'native' }}
         shell: bash
         working-directory: .
         run: |
           rustc --version --verbose
           cargo --version --verbose
           rustup --version
-      - name: Build library
-        run: make clean build-deps
-      - name: Create artifact
-        run: tar -czvf ${{ steps.artifact-name.outputs.artifact }} libatc_router.*
-      - name: Upload artifacts
-        id: upload-artifact
+      - name: Build native archive
+        if: ${{ matrix.build_mode == 'native' }}
+        env:
+          ATC_ROUTER_VARIANT: ${{ matrix.variant }}
+        run: ./scripts/build-host-library.sh
+      - name: Stage native artifact
+        if: ${{ matrix.build_mode == 'native' }}
+        run: |
+          mkdir -p dist/${{ matrix.variant }}
+          cp libatc_router_vendor/libatc_router_${{ matrix.variant }}.a dist/${{ matrix.variant }}/
+          cp atc-router.h dist/${{ matrix.variant }}/
+      - name: Create native artifact
+        if: ${{ matrix.build_mode == 'native' }}
+        run: tar -czvf ${{ steps.artifact-name.outputs.artifact }} -C dist/${{ matrix.variant }} .
+      - name: Set up Docker buildx
+        if: ${{ matrix.build_mode == 'docker' }}
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Build musl artifact
+        if: ${{ matrix.build_mode == 'docker' }}
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile.build
+          push: false
+          outputs: type=local,dest=./image
+          build-args: |
+            ARTIFACT_NAME=${{ steps.artifact-name.outputs.artifact }}
+      - name: Upload native artifacts
+        if: ${{ matrix.build_mode == 'native' }}
+        id: upload-native-artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: ${{ steps.artifact-name.outputs.artifact }}
           path: ./${{ steps.artifact-name.outputs.artifact }}
+          if-no-files-found: error
+      - name: Upload artifacts
+        if: ${{ matrix.build_mode == 'docker' }}
+        id: upload-docker-artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ steps.artifact-name.outputs.artifact }}
+          path: ./image/out/${{ steps.artifact-name.outputs.artifact }}
           if-no-files-found: error
 
   release:

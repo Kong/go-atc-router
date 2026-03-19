@@ -1,7 +1,6 @@
 package goatcrouter
 
 // #cgo CFLAGS: -DDEFINE_ATC_ROUTER_FFI=1
-// #cgo LDFLAGS: -L/tmp/lib -latc_router
 // #include <stddef.h>
 // #include "atc-router.h"
 import "C"
@@ -13,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/google/uuid"
+	_ "github.com/kong/go-atc-router/libatc_router_vendor"
 )
 
 // FieldType serves to indicate the desired data type for a Schema field.
