@@ -1,5 +1,8 @@
 name: Release
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       tag:
@@ -13,7 +16,6 @@ on:
         default: false
 
 jobs:
-
   build:
     name: Build
     strategy:
@@ -73,9 +75,51 @@ jobs:
           path: ./${{ steps.artifact-name.outputs.artifact }}
           if-no-files-found: error
 
+  build-image:
+    name: Build for docker
+    strategy:
+      matrix:
+        arch: [ amd64, arm64 ]
+    runs-on: ${{ matrix.arch == 'amd64' && 'ubuntu-latest' || 'ubuntu-24.04-arm' }}
+    outputs:
+      tag: ${{ steps.tag-name.outputs.tag }}
+      artifact: ${{ steps.artifact-name.outputs.artifact }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout atc-router
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: Kong/atc-router
+          path: atc-router
+      - name: Create tag name
+        id: tag-name
+        run: echo "tag=${{ inputs.tag == '' && 'snapshot' || inputs.tag }}" >> "$GITHUB_OUTPUT"
+      - name: Create artifact name
+        id: artifact-name
+        run: echo "artifact=libatc_router-${{ steps.tag-name.outputs.tag }}-docker-${{ matrix.arch }}.tar.gz" >> "$GITHUB_OUTPUT"
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Docker build
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        with:
+          context: .
+          file: ./Dockerfile.build
+          push: false
+          outputs: type=local,dest=./image
+          build-args: |
+            ARTIFACT_NAME=${{ steps.artifact-name.outputs.artifact }}
+      - name: Upload artifacts
+        id: upload-artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ steps.artifact-name.outputs.artifact }}
+          path: ./image/out/${{ steps.artifact-name.outputs.artifact }}
+          if-no-files-found: error
+
   release:
     name: Release
-    needs: [ build ]
+    needs: [ build, build-image ]
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
@@ -90,6 +134,6 @@ jobs:
         uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
         with:
           artifacts: "libatc_router-*.tar.gz"
-          tag: ${{ needs.build.outputs.tag }}
+          tag: ${{ inputs.tag == '' && 'snapshot' || inputs.tag }}
           draft: ${{ inputs.draft }}
           allowUpdates: ${{ inputs.tag == '' && 'true' || inputs.draft }}
