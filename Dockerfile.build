@@ -5,7 +5,7 @@ ADD . .
 ARG ARTIFACT_NAME=libatc_router-snapshot-alpine3.20.tar.gz
 
 RUN apk update && \
-  apk add bash curl git build-base && \
+  apk add bash curl git build-base musl && \
   make build-deps
 
 RUN tar -zcvf ${ARTIFACT_NAME} libatc_router.* && \
