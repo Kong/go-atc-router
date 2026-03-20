@@ -3,11 +3,12 @@ FROM rust:1.92-alpine3.20 AS atc-router
 ADD . .
 
 ARG ARTIFACT_NAME=libatc_router-snapshot-alpine3.20.tar.gz
+ARG ARCH=docker
 
 RUN apk update && \
   apk add bash curl git build-base musl && \
-  make build-deps
+  ARCH=${ARCH} make build-deps
 
-RUN tar -zcvf ${ARTIFACT_NAME} libatc_router.* && \
+RUN tar -zcvf ${ARTIFACT_NAME} libatc_router_${ARCH}.a && \
   mkdir -p /out && \
   cp ${ARTIFACT_NAME} /out/
