@@ -1,20 +1,15 @@
 name: Release
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to release'
-        required: true
-        type: string
-      draft:
-        description: 'Release as draft'
-        required: false
-        type: boolean
-        default: false
+  pull_request: {}
+  push:
+    branches:
+      - main
 
 jobs:
   build-native:
     name: Build ${{ matrix.variant }}
+    if: github.event_name == 'pull_request'
     strategy:
       matrix:
         include:
@@ -36,12 +31,9 @@ jobs:
         with:
           repository: Kong/atc-router
           path: atc-router
-      - name: Create tag name
-        id: tag-name
-        run: echo "tag=${{ inputs.tag == '' && 'snapshot' || inputs.tag }}" >> "$GITHUB_OUTPUT"
       - name: Create artifact name
         id: artifact-name
-        run: echo "artifact=libatc_router-${{ steps.tag-name.outputs.tag }}-${{ matrix.variant }}.tar.gz" >> "$GITHUB_OUTPUT"
+        run: echo "artifact=libatc_router-${{ matrix.variant }}.tar.gz" >> "$GITHUB_OUTPUT"
       - name: Install rustup, if needed
         shell: bash
         run: |
@@ -83,6 +75,7 @@ jobs:
 
   build-image:
     name: Build with docker
+    if: github.event_name == 'pull_request'
     strategy:
       matrix:
         include:
@@ -99,12 +92,9 @@ jobs:
         with:
           repository: Kong/atc-router
           path: atc-router
-      - name: Create tag name
-        id: tag-name
-        run: echo "tag=${{ inputs.tag == '' && 'snapshot' || inputs.tag }}" >> "$GITHUB_OUTPUT"
       - name: Create artifact name
         id: artifact-name
-        run: echo "artifact=libatc_router-${{ steps.tag-name.outputs.tag }}-${{ matrix.variant }}.tar.gz" >> "$GITHUB_OUTPUT"
+        run: echo "artifact=libatc_router-${{ matrix.variant }}.tar.gz" >> "$GITHUB_OUTPUT"
       - name: Set up Docker buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       - name: Build musl artifact
@@ -125,8 +115,9 @@ jobs:
           path: ./image/out/${{ steps.artifact-name.outputs.artifact }}
           if-no-files-found: error
 
-  release:
-    name: Release
+  commit-libs:
+    name: Commit libraries
+    if: github.event_name == 'pull_request'
     needs: [ build-native, build-image ]
     runs-on: ubuntu-latest
     permissions:
@@ -135,16 +126,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.head_ref }}
-          # Value already defaults to true, but `persist-credentials` is required to push new commits to the repository.
-          persist-credentials: true
+          ref: ${{github.event.pull_request.head.ref}}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+          fetch-depth: 0
       - name: Download artifacts
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 #v7.0.0
         with:
           merge-multiple: true
           pattern: "*.tar.gz"
       - name: Unzip artifacts
-        run: |         
+        run: |
           for f in *.tar.gz; do tar -xzvf $f -C ./libatc_router_vendor; done
       - name: Commit and Push changes
         run: |
@@ -154,11 +145,29 @@ jobs:
 
           git add ./libatc_router_vendor
           # Only commit if there are actually changes to avoid workflow errors
-          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: automated build update [skip ci]" && git push)
-      - name: Create Release
-        uses: ncipollo/release-action@b7eabc95ff50cbeeedec83973935c8f306dfcd0b # v1.20.0
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: automated build update [skip ci]" && git push)     
+
+  tag:
+    name: Tag
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@a22cf08638b34d5badda920f9daf6e72c477b07b # v.6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create a GitHub release
+        uses: ncipollo/release-action@bcfe5470707e8832e12347755757cec0eb3c22af # v1.18.0
         with:
           artifacts: "libatc_router-*.tar.gz"
-          tag: ${{ inputs.tag == '' && 'snapshot' || inputs.tag }}
-          draft: ${{ inputs.draft }}
-          allowUpdates: ${{ inputs.tag == '' && 'true' || inputs.draft }}
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
